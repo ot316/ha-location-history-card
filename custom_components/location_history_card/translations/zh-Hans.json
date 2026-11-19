@@ -1,0 +1,21 @@
+{
+  "title": "位置历史卡片",
+  "config": {
+    "step": {
+      "user": {
+        "title": "安装位置历史卡片",
+        "description": "注册位置历史卡片模块。安装后即可在仪表盘中添加这张卡片。"
+      }
+    },
+    "abort": {
+      "already_configured": "已安装位置历史卡片。",
+      "single_instance_allowed": "已安装位置历史卡片。",
+      "yaml_resources": "自动注册需要 Lovelace 资源使用存储模式管理。"
+    }
+  },
+  "exceptions": {
+    "yaml_resources": {
+      "message": "自动注册需要 Lovelace 资源使用存储模式管理。"
+    }
+  }
+}

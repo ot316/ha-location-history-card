@@ -1,0 +1,21 @@
+{
+  "title": "Location History Card",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Install Location History Card",
+        "description": "Register the Location History Card module. You can then add the card to a dashboard."
+      }
+    },
+    "abort": {
+      "already_configured": "Location History Card is already installed.",
+      "single_instance_allowed": "Location History Card is already installed.",
+      "yaml_resources": "Automatic registration requires Lovelace resources to be managed in storage mode."
+    }
+  },
+  "exceptions": {
+    "yaml_resources": {
+      "message": "Automatic registration requires Lovelace resources to be managed in storage mode."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "domain": "location_history_card",
+  "name": "Location History Card",
+  "categories": ["presence_location"],
+  "codeowners": ["@tellok"],
+  "config_flow": true,
+  "dependencies": ["http", "lovelace"],
+  "documentation": "https://github.com/tellok/ha-location-history-card",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/tellok/ha-location-history-card/issues",
+  "single_config_entry": true,
+  "version": "1.0.0"
+}
