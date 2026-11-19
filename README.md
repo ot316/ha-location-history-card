@@ -4,6 +4,22 @@ Replay the positions Home Assistant Recorder saved for people and device tracker
 
 [![Open Location History Card in Home Assistant](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=tellok&repository=ha-location-history-card&category=integration)
 
+## Screenshots
+
+These screenshots use fictional people and tracks around Central Park.
+
+### Desktop Panel
+
+![The desktop Panel view, with three colored tracks on the map and a shared timeline below](docs/images/desktop.webp)
+
+### Playback range
+
+![Timeline with three movement rows, an orange range bounded by draggable handles, and a blue playhead](docs/images/timeline.webp)
+
+### Mobile Panel
+
+<img src="docs/images/mobile.webp" alt="The mobile Panel view in dark mode, with a map above the timeline and playback controls" width="360">
+
 ## Install
 
 1. On Home Assistant 2026.11.1 or later, go to **Settings → Marketplace → Add from link** and enter `https://github.com/tellok/ha-location-history-card`.
