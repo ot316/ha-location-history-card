@@ -4,6 +4,9 @@ Replay the positions Home Assistant Recorder saved for people and device tracker
 
 [![Open Location History Card in Home Assistant](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=tellok&repository=ha-location-history-card&category=integration)
 
+> [!TIP]
+> **Using Apple Find My?** Try [ha-apple-find](https://github.com/tellok/ha-apple-find), a Home Assistant integration that creates `device_tracker` entities for your Apple devices and people who share their location with you in Find My. This card can replay their locations saved by Home Assistant Recorder.
+
 ## Screenshots
 
 These screenshots use fictional people and tracks around Central Park.
