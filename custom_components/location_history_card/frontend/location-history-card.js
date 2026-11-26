@@ -6,6 +6,8 @@ const maxMovementGap = 600;
 const tickHours = [1, 2, 3, 4, 6, 8, 12, 24];
 const visibilityEvent = `${tag}:visibility-changed`;
 const compactTrailPoint = { radius: 2.5, stroke: 0.5 };
+const markerLabelAttribute = "location_history_marker_label";
+const nameSegmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter() : undefined;
 const panelSizing = new WeakMap();
 const copy = {
   en: {
@@ -289,6 +291,36 @@ const entityId = (entry) => typeof entry === "string" ? entry : entry?.entity;
 const isPerson = (id) => typeof id === "string" && /^person\.[a-z0-9_]+$/.test(id);
 const isTracker = (id) => typeof id === "string" && id.startsWith("device_tracker.");
 const entityName = (states, id) => states?.[id]?.attributes.friendly_name || id;
+
+function groupByInitials(people, field) {
+  const groups = new Map();
+  for (const person of people) {
+    const initials = person[field];
+    if (!groups.has(initials)) groups.set(initials, []);
+    groups.get(initials).push(person);
+  }
+  return groups;
+}
+
+function personMarkerLabels(markers) {
+  const people = markers.filter(({ id }) => isPerson(id)).map(({ id, name, picture }) => {
+    const initials = (name.trim() || id).normalize().split(/\s+/u)
+      .map((part) => (nameSegmenter?.segment(part).containing(0).segment ?? Array.from(part)[0]).toUpperCase());
+    return { id, name, picture, first: initials[0], initials: initials.join("") };
+  });
+  const labels = new Map();
+  for (const [first, group] of groupByInitials(people, "first")) {
+    if (group.length === 1) {
+      labels.set(group[0].id, first);
+      continue;
+    }
+    const textMarkers = group.filter((person) => !person.picture);
+    for (const [initials, matches] of groupByInitials(textMarkers, "initials")) {
+      for (const { id, name } of matches) labels.set(id, matches.length === 1 ? initials : name);
+    }
+  }
+  return labels;
+}
 
 function hasCoordinates(attributes) {
   const { latitude, longitude } = attributes ?? {};
@@ -604,7 +636,7 @@ class LocationHistoryCard extends HTMLElement {
 
     // On the native map only, provide historical entity states in Lit's context.
     root.addEventListener("context-request", (event) => {
-      if (event.context !== "states" || event.target !== this.#map) return;
+      if (event.context !== "states" || event.composedPath()[0] !== this.#map) return;
       event.stopPropagation();
       const callback = event.callback;
       const publish = (states) => callback(states, dispose);
@@ -734,7 +766,11 @@ class LocationHistoryCard extends HTMLElement {
       this.#renderMovement();
       this.#renderTicks();
     }
-    if (languageChanged || defaultsChanged || preferencesChanged || !this.#frame) this.#renderFrame();
+    const picturesChanged = this.#frame?.some(({ id, marker, picture }) =>
+      marker && picture !== this.#markerPicture(id, marker));
+    if (languageChanged || defaultsChanged || preferencesChanged || picturesChanged || !this.#frame) {
+      this.#renderFrame();
+    }
     this.#updateManageButton();
   }
 
@@ -798,7 +834,7 @@ class LocationHistoryCard extends HTMLElement {
       this.#map = document.createElement("ha-map");
       this.#map.zoom = 14;
       this.#map.zoomPosition = "topright";
-      this.#map.clusterMarkers = false;
+      this.#map.clusterMarkers = true;
       this.#map.scaleRuler = true;
       this.#map.autoFit = false;
       this.#map.addEventListener("editing-available-changed", () => {
@@ -901,6 +937,10 @@ class LocationHistoryCard extends HTMLElement {
 
   #name(id) {
     return entityName(this.#hass?.states, id);
+  }
+
+  #markerPicture(id, marker) {
+    return marker.attributes.entity_picture ?? this.#hass.states[id]?.attributes.entity_picture;
   }
 
   #updateManageButton() {
@@ -1257,6 +1297,7 @@ class LocationHistoryCard extends HTMLElement {
       const series = this.#history.get(id);
       const day = series?.day ?? [];
       const markerCount = countThrough(day, now);
+      const marker = day[markerCount - 1] ?? series?.baseline;
       const trail = nodes.trails.checked ? series?.trail : undefined;
       return {
         id, trail, day,
@@ -1266,7 +1307,7 @@ class LocationHistoryCard extends HTMLElement {
         fitStart: countThrough(day, this.#range.start, false),
         fitEnd: countThrough(day, this.#range.end),
         hasHistory: Boolean(day.length || series?.baseline),
-        marker: day[markerCount - 1] ?? series?.baseline,
+        marker, picture: marker && this.#markerPicture(id, marker),
       };
     });
     const hasHistory = entries.some((entry) => entry.hasHistory);
@@ -1286,9 +1327,10 @@ class LocationHistoryCard extends HTMLElement {
     }
 
     const previous = this.#frame ?? [];
-    const visibilityChanged = previous.length !== entries.length ||
+    const visibilityChanged = !this.#frame || previous.length !== entries.length ||
       entries.some(({ id }, index) => previous[index]?.id !== id);
-    const markersChanged = visibilityChanged || entries.some(({ marker }, index) => marker !== previous[index]?.marker);
+    const markersChanged = visibilityChanged || entries.some(({ marker, picture }, index) =>
+      marker !== previous[index]?.marker || picture !== previous[index]?.picture);
     const pathsChanged = visibilityChanged || entries.some(({ trail, first, elapsed, end }, index) => {
       const old = previous[index];
       return trail !== old.trail || first !== old.first || elapsed !== old.elapsed || end !== old.end;
@@ -1296,19 +1338,27 @@ class LocationHistoryCard extends HTMLElement {
     if (markersChanged) {
       const states = {};
       const entities = [];
-      for (const { id, marker } of entries) {
-        if (!marker) continue;
-        const name = this.#name(id);
-        const color = this.#color(id);
+      const markers = entries.filter(({ marker }) => marker)
+        .map((entry) => ({ ...entry, name: this.#name(entry.id) }));
+      const labels = personMarkerLabels(markers);
+      for (const { id, marker, name, picture } of markers) {
+        const label = labels.get(id);
+        const attributes = { ...marker.attributes, friendly_name: name, entity_picture: picture };
+        const entity = { entity_id: id, color: this.#color(id), name, hide_accuracy: true };
+        // The native map uses attribute labels for text markers and keeps name as the accessible title.
+        if (label !== undefined) {
+          attributes[markerLabelAttribute] = label;
+          entity.label_mode = "attribute";
+          entity.attribute = markerLabelAttribute;
+        }
         states[id] = {
           entity_id: id,
           state: marker.state,
-          attributes: { ...marker.attributes, friendly_name: name,
-            entity_picture: marker.attributes.entity_picture ?? this.#hass.states[id]?.attributes.entity_picture },
+          attributes,
           last_changed: marker.timestamp.toISOString(),
           last_updated: marker.timestamp.toISOString(),
         };
-        entities.push({ entity_id: id, color, name, hide_accuracy: true });
+        entities.push(entity);
       }
       this.#markerStates = states;
       this.#map.entities = entities;
