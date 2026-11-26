@@ -52,7 +52,7 @@ type: custom:location-history-card
 
 The card replays recorded coordinates for `device_tracker` entities and `person` entities linked to a tracker that provides coordinates. It includes people automatically and shows people linked to trackers that report coordinates or identify themselves as GPS trackers by default. In a storage-mode dashboard, administrators can open **Manage entities** to add device trackers or remove people from the card. Use the eye beside an entity to toggle its map and timeline visibility. Your browser remembers those choices for your Home Assistant account.
 
-Person markers show the first initial. When visible people share an initial, the map uses their avatars where available, then initials from all name parts, and finally the full name if those initials still match. Nearby markers cluster together. Select a cluster to reach its members, including people recorded at the same location.
+Person markers show an avatar when available and the first initial otherwise. When visible text markers share an initial, the map uses initials from all name parts and shows the full name if those initials still match. Nearby markers cluster together. Select a cluster to reach its members, including people recorded at the same location.
 
 Drag anywhere in the timeline to seek. Drag either orange handle to trim playback, or move the playhead beyond a handle to extend the range. Faded tracks give context outside the range. **Fit selected time range** frames the recorded points within the range for the visible entities.
 
