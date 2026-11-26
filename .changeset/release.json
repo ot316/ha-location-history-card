@@ -1,12 +1,12 @@
 {
   "unit": "ha-location-history-card",
-  "base": "013582a031764f3083a08d0bfbbcf10952e59855",
-  "old": "1.0.3",
-  "new": "1.1.0",
-  "bump": "minor",
-  "tag": "v1.1.0",
+  "base": "b2fee25ea84c566b0e2ca296abf95c1df61fe42b",
+  "old": "1.1.0",
+  "new": "1.1.1",
+  "bump": "patch",
+  "tag": "v1.1.1",
   "asset": "location_history_card.zip",
   "changesets": {
-    ".changeset/person-marker-avatars.md": "efa4bddb44f50ae46306f0730f07684ede22c0df"
+    ".changeset/tracker-marker-names.md": "12916a7b2214e3e8d9d3a5f1d7fdb4687264d645"
   }
 }
