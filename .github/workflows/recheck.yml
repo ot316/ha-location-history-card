@@ -23,4 +23,9 @@ jobs:
       - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
+            const fs = require('node:fs');
+            if (!fs.existsSync('.github/workflows/recheck.yml')) {
+              core.notice('Target-branch refresh becomes active after this workflow lands on the default branch.');
+              return;
+            }
             await require('./.github/scripts/pr.cjs').dispatchRefreshes(github, context, core);
