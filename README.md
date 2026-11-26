@@ -2,6 +2,12 @@
 
 Replay the positions Home Assistant Recorder saved for people and device trackers. The card uses Home Assistant's map, fills a Panel view, and lets you scrub the day or play back a selected time range.
 
+**Common uses**
+
+- **Make a travel route guide.** Let Home Assistant record your route as you travel, then use the card to retrace your stops and map out a route guide to share with friends.
+- **Revisit an outing.** Replay a hike, bike ride, or road trip to see where you went and when you stopped.
+- **See when you met up.** View your track alongside a family member's or friend's on the same timeline to see where and when your routes came together.
+
 [![Open Location History Card in Home Assistant](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=tellok&repository=ha-location-history-card&category=integration)
 
 > [!TIP]
