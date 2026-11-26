@@ -1,0 +1,12 @@
+{
+  "unit": "ha-location-history-card",
+  "base": "013582a031764f3083a08d0bfbbcf10952e59855",
+  "old": "1.0.3",
+  "new": "1.1.0",
+  "bump": "minor",
+  "tag": "v1.1.0",
+  "asset": "location_history_card.zip",
+  "changesets": {
+    ".changeset/person-marker-avatars.md": "efa4bddb44f50ae46306f0730f07684ede22c0df"
+  }
+}
