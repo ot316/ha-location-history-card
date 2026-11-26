@@ -1,5 +1,7 @@
 # Location History Card for Home Assistant
 
+<img src="custom_components/location_history_card/brand/icon.png" alt="Location History Card icon" width="112" height="112">
+
 Replay the positions Home Assistant Recorder saved for people and device trackers. The card uses Home Assistant's map, fills a Panel view, and lets you scrub the day or play back a selected time range.
 
 **Common uses**
