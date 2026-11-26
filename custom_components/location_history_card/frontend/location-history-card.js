@@ -8,6 +8,7 @@ const visibilityEvent = `${tag}:visibility-changed`;
 const compactTrailPoint = { radius: 2.5, stroke: 0.5 };
 const markerLabelAttribute = "location_history_marker_label";
 const nameSegmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter() : undefined;
+const unspacedNameCharacter = /[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}\p{scx=Hangul}\p{scx=Thai}\p{scx=Lao}\p{scx=Khmer}\p{scx=Myanmar}]/u;
 const panelSizing = new WeakMap();
 const copy = {
   en: {
@@ -59,6 +60,7 @@ template.innerHTML = `
     .map-area { position: relative; flex: 1; min-height: 0; background: var(--secondary-background-color); }
     :host(:not([panel])) .map-area { min-height: clamp(280px, 58dvh, 640px); }
     ha-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+    ha-map::part(marker) { line-height: 1; overflow-wrap: anywhere; }
     .message { z-index: 2; position: absolute; inset-inline-start: 12px; bottom: 32px;
       max-width: calc(100% - 24px); box-sizing: border-box; padding: 8px 12px;
       border: 1px solid var(--divider-color); border-radius: var(--ha-border-radius-md, 8px);
@@ -290,32 +292,66 @@ function trailSections(trail, first, elapsed, end) {
 const entityId = (entry) => typeof entry === "string" ? entry : entry?.entity;
 const isPerson = (id) => typeof id === "string" && /^person\.[a-z0-9_]+$/.test(id);
 const isTracker = (id) => typeof id === "string" && id.startsWith("device_tracker.");
-const entityName = (states, id) => states?.[id]?.attributes.friendly_name || id;
+const friendlyName = (attributes) => typeof attributes?.friendly_name === "string" ? attributes.friendly_name.trim() : "";
+const entityName = (states, id, recordedName) => friendlyName(states?.[id]?.attributes) || recordedName || id;
 
-function groupByInitials(people, field) {
+function groupMarkersBy(markers, field) {
   const groups = new Map();
-  for (const person of people) {
-    const initials = person[field];
-    if (!groups.has(initials)) groups.set(initials, []);
-    groups.get(initials).push(person);
+  for (const marker of markers) {
+    const key = marker[field];
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(marker);
   }
   return groups;
 }
 
-function personMarkerLabels(markers) {
-  const people = markers.filter(({ id, picture }) => isPerson(id) && !picture).map(({ id, name }) => {
-    const initials = (name.trim() || id).normalize().split(/\s+/u)
-      .map((part) => (nameSegmenter?.segment(part).containing(0).segment ?? Array.from(part)[0]).toUpperCase());
-    return { id, name, first: initials[0], initials: initials.join("") };
+function nameInitials(name) {
+  const normalized = name.normalize();
+  const characters = nameSegmenter
+    ? Array.from(nameSegmenter.segment(normalized), ({ segment }) => segment)
+    : normalized.match(/\P{Mark}\p{Mark}*|\p{Mark}+/gu) ?? [];
+  const initials = [];
+  let atStart = true;
+  for (let index = 0; index < characters.length; index++) {
+    let character = characters[index];
+    // Some segmenters return marks such as Burmese visarga as separate segments.
+    while (/^\p{Mark}/u.test(characters[index + 1] ?? "")) {
+      character += characters[++index];
+    }
+    if (/^\s/u.test(character)) {
+      atStart = true;
+      continue;
+    }
+    const individualPart = unspacedNameCharacter.test(character);
+    if (atStart || individualPart) initials.push(character.toUpperCase());
+    atStart = individualPart;
+  }
+  return initials;
+}
+
+function markerLabels(markers) {
+  const textMarkers = markers.filter(({ picture }) => !picture).map(({ id, name }) => {
+    const objectId = id.split(".")[1];
+    const label = name === id ? objectId.replaceAll("_", " ").trim() || objectId : name;
+    const givenName = name === id ? label : label.replace(/\s+\S+$/u, "");
+    const initials = nameInitials(label);
+    return { id, label, givenName, first: initials[0], initials: initials.join("") };
   });
+  if (markers.length === 1) return new Map(textMarkers.map(({ id, label }) => [id, label]));
+
   const labels = new Map();
-  for (const [first, group] of groupByInitials(people, "first")) {
+  for (const [first, group] of groupMarkersBy(textMarkers, "first")) {
     if (group.length === 1) {
       labels.set(group[0].id, first);
       continue;
     }
-    for (const [initials, matches] of groupByInitials(group, "initials")) {
-      for (const { id, name } of matches) labels.set(id, matches.length === 1 ? initials : name);
+    const byCharacter = group.filter(({ label }) => unspacedNameCharacter.test(label));
+    for (const [initials, matches] of groupMarkersBy(byCharacter, "initials")) {
+      for (const { id, label } of matches) labels.set(id, matches.length === 1 ? initials : label);
+    }
+    const byWord = group.filter(({ label }) => !unspacedNameCharacter.test(label));
+    for (const [givenName, matches] of groupMarkersBy(byWord, "givenName")) {
+      for (const { id, label } of matches) labels.set(id, matches.length === 1 ? givenName : label);
     }
   }
   return labels;
@@ -462,7 +498,8 @@ function toSamples(rows, start) {
   // Keep the first point and all moves, but skip repeated coordinates in the trail.
   const trail = day.filter(({ point }, index) =>
     index === 0 || point[0] !== day[index - 1].point[0] || point[1] !== day[index - 1].point[1]);
-  return { day, baseline, trail };
+  const name = friendlyName(locations.findLast(({ attributes }) => friendlyName(attributes))?.attributes);
+  return { day, baseline, trail, name };
 }
 
 function distanceMeters(a, b) {
@@ -766,7 +803,7 @@ class LocationHistoryCard extends HTMLElement {
       this.#renderTicks();
     }
     const picturesChanged = this.#frame?.some(({ id, marker, picture }) =>
-      marker && picture !== this.#markerPicture(id, marker));
+      marker && picture !== this.#markerPicture(id));
     if (languageChanged || defaultsChanged || preferencesChanged || picturesChanged || !this.#frame) {
       this.#renderFrame();
     }
@@ -876,6 +913,7 @@ class LocationHistoryCard extends HTMLElement {
     this.#status = entityIds.length ? "loading" : "";
     this.#history.clear();
     this.#frame = undefined;
+    this.#renderEntities();
     this.#renderMovement();
     this.#renderTicks();
     this.#renderFrame();
@@ -901,6 +939,7 @@ class LocationHistoryCard extends HTMLElement {
         return [id, { ...series, movement }];
       }));
       this.#status = "";
+      this.#renderEntities();
       this.#renderMovement();
       this.#renderFrame();
       this.#fit(true);
@@ -935,11 +974,11 @@ class LocationHistoryCard extends HTMLElement {
   }
 
   #name(id) {
-    return entityName(this.#hass?.states, id);
+    return entityName(this.#hass?.states, id, this.#history.get(id)?.name);
   }
 
-  #markerPicture(id, marker) {
-    return marker.attributes.entity_picture || this.#hass.states[id]?.attributes.entity_picture;
+  #markerPicture(id) {
+    return this.#hass.states[id]?.attributes.entity_picture;
   }
 
   #updateManageButton() {
@@ -1306,7 +1345,7 @@ class LocationHistoryCard extends HTMLElement {
         fitStart: countThrough(day, this.#range.start, false),
         fitEnd: countThrough(day, this.#range.end),
         hasHistory: Boolean(day.length || series?.baseline),
-        marker, picture: marker && this.#markerPicture(id, marker),
+        marker, picture: marker && this.#markerPicture(id),
       };
     });
     const hasHistory = entries.some((entry) => entry.hasHistory);
@@ -1339,7 +1378,7 @@ class LocationHistoryCard extends HTMLElement {
       const entities = [];
       const markers = entries.filter(({ marker }) => marker)
         .map((entry) => ({ ...entry, name: this.#name(entry.id) }));
-      const labels = personMarkerLabels(markers);
+      const labels = markerLabels(markers);
       for (const { id, marker, name, picture } of markers) {
         const label = labels.get(id);
         const attributes = { ...marker.attributes, friendly_name: name, entity_picture: picture };
