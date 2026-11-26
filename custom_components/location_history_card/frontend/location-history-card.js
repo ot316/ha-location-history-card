@@ -303,10 +303,10 @@ function groupByInitials(people, field) {
 }
 
 function personMarkerLabels(markers) {
-  const people = markers.filter(({ id }) => isPerson(id)).map(({ id, name, picture }) => {
+  const people = markers.filter(({ id, picture }) => isPerson(id) && !picture).map(({ id, name }) => {
     const initials = (name.trim() || id).normalize().split(/\s+/u)
       .map((part) => (nameSegmenter?.segment(part).containing(0).segment ?? Array.from(part)[0]).toUpperCase());
-    return { id, name, picture, first: initials[0], initials: initials.join("") };
+    return { id, name, first: initials[0], initials: initials.join("") };
   });
   const labels = new Map();
   for (const [first, group] of groupByInitials(people, "first")) {
@@ -314,8 +314,7 @@ function personMarkerLabels(markers) {
       labels.set(group[0].id, first);
       continue;
     }
-    const textMarkers = group.filter((person) => !person.picture);
-    for (const [initials, matches] of groupByInitials(textMarkers, "initials")) {
+    for (const [initials, matches] of groupByInitials(group, "initials")) {
       for (const { id, name } of matches) labels.set(id, matches.length === 1 ? initials : name);
     }
   }
@@ -940,7 +939,7 @@ class LocationHistoryCard extends HTMLElement {
   }
 
   #markerPicture(id, marker) {
-    return marker.attributes.entity_picture ?? this.#hass.states[id]?.attributes.entity_picture;
+    return marker.attributes.entity_picture || this.#hass.states[id]?.attributes.entity_picture;
   }
 
   #updateManageButton() {
