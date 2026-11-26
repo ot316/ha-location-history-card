@@ -2,3 +2,5 @@
 __pycache__/
 *.py[cod]
 *.zip
+/node_modules/
+/.version-pr-notes.md

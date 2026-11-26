@@ -1,0 +1,18 @@
+name: Integration checks
+description: Run HACS and hassfest against the checked-out integration.
+runs:
+  using: composite
+  steps:
+    - id: source
+      shell: bash
+      run: printf 'sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+    - uses: hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa
+      with:
+        category: integration
+        repository: ${{ github.repository }}
+        comment: 'false'
+      env:
+        # HACS reads GitHub's API, so bind it to the same SHA hassfest sees on disk.
+        REPOSITORY_REF: ${{ steps.source.outputs.sha }}
+    - uses: home-assistant/actions/hassfest@9e9565e68f5a70d874202871f4c4064d23814235
+      if: "!cancelled()"
