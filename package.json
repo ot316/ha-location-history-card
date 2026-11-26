@@ -1,6 +1,6 @@
 {
   "name": "ha-location-history-card",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "private": true,
   "devDependencies": {
     "@changesets/cli": "3.0.3",
