@@ -13,7 +13,7 @@ const panelSizing = new WeakMap();
 const copy = {
   en: {
     title: "Location history", date: "Date", time: "Time", play: "Play", pause: "Pause",
-    timeline: "Timeline", speed: "Playback speed", trails: "Join the dots", fit: "Fit selected time range",
+    timeline: "Timeline", speed: "Playback speed", trails: "Show paths", fit: "Fit selected time range",
     refresh: "Reload history", loading: "Loading location history…", mapError: "The Home Assistant map could not load.",
     error: "Could not load location history.", noHistory: "No GPS history for the selected dates.",
     noPosition: "No recorded location at this time.", hidden: "Use an eye button to show a location.",
@@ -32,7 +32,7 @@ const copy = {
   },
   zh: {
     title: "位置历史", date: "日期", time: "时间", play: "播放", pause: "暂停",
-    timeline: "时间轴", speed: "播放速度", trails: "连接轨迹点", fit: "聚焦选中时段",
+    timeline: "时间轴", speed: "播放速度", trails: "显示路径", fit: "聚焦选中时段",
     refresh: "重新读取历史", loading: "正在读取位置历史…", mapError: "无法加载 Home Assistant 地图。",
     error: "无法读取位置历史。", noHistory: "所选日期没有可用的 GPS 记录。",
     noPosition: "这个时间点还没有位置记录。", hidden: "点击眼睛按钮显示实体位置。",
@@ -1478,7 +1478,7 @@ class LocationHistoryCard extends HTMLElement {
 
   #color(id) { return sampleColors[this.#entities.indexOf(id) % sampleColors.length]; }
 
-  // "Join the dots" off: hide the lines between the recorded points and keep the points.
+  // "Show paths" off: hide the lines between the recorded points and keep the points.
   // The native map draws each path as a line layer and a point layer, so only the line
   // layers are hidden (and re-hidden whenever the map rebuilds its style).
   #applyLines() {
